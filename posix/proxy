@@ -16,6 +16,8 @@ Commands:
   clear               Remove all proxy settings
   show                Show the saved proxy configuration
   sync                Re-apply the saved configuration to the environment
+  completion <zsh|bash>
+                      Print the completion script for the given shell
   help                Show this help
 
 The configuration is stored in ~/.config/proxy/config. Shell sessions read
@@ -209,6 +211,90 @@ cmd_sync() {
   printf 'Proxy configuration: %s\n' "$config_file"
 }
 
+cmd_completion() {
+  [ "$#" -eq 1 ] || {
+    echo "usage: proxy completion <zsh|bash>" >&2
+    exit 2
+  }
+
+  case "$1" in
+    zsh)
+      cat << 'EOF'
+#compdef proxy
+
+_proxy() {
+  local -a commands
+  commands=(
+    'set:save and apply a proxy configuration'
+    'ssh:connect through the configured proxy'
+    'clear:remove all proxy settings'
+    'show:show the saved proxy configuration'
+    'sync:re-apply the saved configuration to the environment'
+    'help:show help'
+  )
+
+  if (( CURRENT == 2 )); then
+    _describe 'proxy command' commands
+    return
+  fi
+
+  case "${words[2]}" in
+    set)
+      _arguments \
+        '--http[HTTP/HTTPS proxy url]:url' \
+        '--socks[SOCKS proxy url]:url' \
+        '--no-proxy[comma-separated hosts which bypass the proxy]:list' \
+        '(-h --help)'{-h,--help}'[show help]' \
+        ':http proxy url' \
+        ':socks proxy url'
+      ;;
+    ssh)
+      _message 'host'
+      ;;
+  esac
+}
+
+compdef _proxy proxy
+EOF
+      ;;
+    bash)
+      cat << 'EOF'
+_proxy() {
+    local cur prev
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    if [ "$COMP_CWORD" -eq 1 ]; then
+        COMPREPLY=($(compgen -W "set ssh clear show sync completion help" -- "$cur"))
+        return 0
+    fi
+
+    case "$prev" in
+        --http | --socks | --no-proxy)
+            return 0
+            ;;
+    esac
+
+    case "${COMP_WORDS[1]}" in
+        set)
+            COMPREPLY=($(compgen -W "--http --socks --no-proxy -h --help" -- "$cur"))
+            ;;
+        completion)
+            COMPREPLY=($(compgen -W "zsh bash" -- "$cur"))
+            ;;
+    esac
+}
+
+complete -F _proxy proxy
+EOF
+      ;;
+    *)
+      echo "proxy: unsupported shell: $1" >&2
+      exit 2
+      ;;
+  esac
+}
+
 subcmd="${1:-help}"
 [ "$#" -gt 0 ] && shift
 
@@ -227,6 +313,9 @@ case "$subcmd" in
     ;;
   sync)
     cmd_sync
+    ;;
+  completion)
+    cmd_completion "$@"
     ;;
   help | -h | --help)
     usage

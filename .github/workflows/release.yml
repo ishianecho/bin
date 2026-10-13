@@ -16,10 +16,12 @@ jobs:
 
       - name: Build archives
         run: |
-          mkdir -p dist
+          mkdir -p dist/stage
           chmod +x posix/*
           tar -czf dist/bin-posix.tar.gz -C posix .
-          (cd win && zip -r ../dist/bin-win.zip .)
+          cp -a posix/. dist/stage/
+          cp -a win/. dist/stage/
+          (cd dist/stage && zip -r ../bin-win.zip .)
 
       - name: Create release
         env:

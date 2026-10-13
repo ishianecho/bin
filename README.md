@@ -50,7 +50,8 @@ On Windows the same commands are available via `proxy.cmd` / `proxy.ps1`;
 
 ### completion.sh
 
-Emits shell completion scripts:
+Routes completion generation to the tools themselves, which implement a
+`completion <zsh|bash>` subcommand:
 
 ```
 completion.sh zsh ghf
@@ -59,15 +60,18 @@ completion.sh bash ghf
 completion.sh bash proxy
 ```
 
+Equivalently, call the subcommand directly:
+
+```
+ghf completion zsh
+proxy completion bash
+```
+
 Write the output to a file on your completion path, for example
 `~/.config/zfunc/_proxy` (zsh) or `~/.config/bash/completions/proxy.bash` (bash).
 
 ## Install
 
 Each release publishes two archives: `bin-posix.tar.gz` (extract into
-`~/.local/bin`) and `bin-win.zip` (extract into `%USERPROFILE%\.local\bin`).
-
-## Development
-
-Tagging `v*` triggers the release workflow, which builds both archives and
-attaches them to a GitHub release.
+`~/.local/bin`) and `bin-win.zip` (extract into `%USERPROFILE%\.local\bin`;
+it also carries the shell scripts for MSYS2 environments).
