@@ -35,9 +35,6 @@ func Relay(host, port string) error {
 	}()
 	go func() {
 		_, err := io.Copy(conn, os.Stdin)
-		if closer, ok := conn.(interface{ CloseWrite() error }); ok {
-			closer.CloseWrite()
-		}
 		stdinDone <- err
 	}()
 
