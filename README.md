@@ -31,8 +31,7 @@ Downloads and installs Neovim (nightly by default, override with
 State-driven manager for a local Xray service (vless + reality): node and
 routing-rule management, port configuration, config generation with
 `xray run -test` validation, service restarts (systemd on Linux, NSSM on
-Windows), and Linux transparent-proxy rules. Run `xrayctl help` for the
-full command reference.
+Windows), and Linux transparent-proxy rules. See [`XRAY.md`](XRAY.md).
 
 ### proxy
 
@@ -56,7 +55,7 @@ ProxyCommand sh -c 'exec "$HOME/.local/bin/proxy" ssh %h %p'
 ```
 
 On Windows `proxy set` and `proxy sync` also update user-level environment
-variables.
+variables. See [`PROXY.md`](PROXY.md).
 
 ### completion
 
