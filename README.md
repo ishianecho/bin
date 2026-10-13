@@ -55,16 +55,18 @@ ProxyCommand sh -c 'exec "$HOME/.local/bin/proxy" ssh %h %p'
 On Windows the same commands are available via `proxy.cmd` / `proxy.ps1`;
 `proxy sync` and `proxy set` also update user-level environment variables.
 
-### completion.sh
+### completion
 
 Routes completion generation to the tools themselves, which implement a
 `completion <zsh|bash>` subcommand:
 
 ```
-completion.sh zsh ghf
-completion.sh zsh proxy
-completion.sh bash ghf
-completion.sh bash proxy
+completion zsh ghf
+completion zsh proxy
+completion zsh xrayctl
+completion bash ghf
+completion bash proxy
+completion bash xrayctl
 ```
 
 Equivalently, call the subcommand directly:
