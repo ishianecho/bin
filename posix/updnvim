@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+kernel="$(uname | tr '[:upper:]' '[:lower:]')"
+case "$kernel" in
+  linux*) os="linux" ;;
+  darwin*) os="darwin" ;;
+  *)
+    echo "Unsupported OS: $kernel" >&2
+    exit 1
+    ;;
+esac
+
+arch="$(uname -m)"
+[ "$arch" = "amd64" ] && arch="x86_64"
+
+if command -v nvim >/dev/null 2>&1; then
+  nvim_destination="$(realpath "$(command -v nvim)" | sed 's#/bin/nvim$##')"
+else
+  nvim_destination="$HOME/.local/opt/nvim"
+fi
+
+latest_release="${LATEST_RELEASE:-nightly}"
+download_url="https://github.com/neovim/neovim/releases/download/${latest_release}/nvim-${os}-${arch}.tar.gz"
+
+temp_dir="${nvim_destination}.tmp.$$"
+mkdir -p "$temp_dir"
+trap 'rm -rf "$temp_dir"' EXIT
+
+echo "Downloading and extracting nvim to $temp_dir..."
+(
+  set -o pipefail
+  curl -fL --progress-bar "$download_url" | tar -xz --strip-components=1 -C "$temp_dir"
+)
+
+rm -rf "$nvim_destination"
+trap - EXIT
+mv "$temp_dir" "$nvim_destination"
+
+echo "Nvim upgraded to $latest_release"
