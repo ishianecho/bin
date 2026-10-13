@@ -24,6 +24,13 @@ Downloads and installs Neovim (nightly by default, override with
 `LATEST_RELEASE=v0.11.0`) into the current nvim prefix, or
 `~/.local/opt/nvim` when nvim is not installed yet.
 
+### xrayctl
+
+State-driven manager for a local Xray service (vless + reality): node and
+routing-rule management, port configuration, config generation with
+`xray run -test` validation, service restarts, and Linux transparent-proxy
+rules. Run `xrayctl help` for the full command reference.
+
 ### proxy
 
 Manages a proxy configuration in `~/.config/proxy/config` and applies it

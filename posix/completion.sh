@@ -3,7 +3,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: completion.sh <zsh|bash> <ghf|proxy>" >&2
+  echo "usage: completion.sh <zsh|bash> <ghf|proxy|xrayctl>" >&2
 }
 
 shell="${1:-}"
@@ -18,7 +18,7 @@ case "$shell" in
 esac
 
 case "$tool" in
-  ghf | proxy) ;;
+  ghf | proxy | xrayctl) ;;
   *)
     usage
     exit 2
