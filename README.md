@@ -61,19 +61,7 @@ Routes completion generation to the tools themselves, which implement a
 `completion <zsh|bash>` subcommand:
 
 ```
-completion zsh ghf
 completion zsh proxy
-completion zsh xrayctl
-completion bash ghf
-completion bash proxy
-completion bash xrayctl
-```
-
-Equivalently, call the subcommand directly:
-
-```
-ghf completion zsh
-proxy completion bash
 ```
 
 Write the output to a file on your completion path, for example
