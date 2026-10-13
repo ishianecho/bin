@@ -58,7 +58,8 @@ On Windows the same commands are available via `proxy.cmd` / `proxy.ps1`;
 ### completion
 
 Routes completion generation to the tools themselves, which implement a
-`completion <zsh|bash>` subcommand:
+`completion <zsh|bash>` subcommand — equivalently, call it directly on the
+tool (`ghf completion zsh`):
 
 ```
 completion zsh proxy
