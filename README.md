@@ -1,6 +1,7 @@
 # bin
 
-Personal CLI tools, released per platform from this repository.
+Personal CLI tools. `proxy` and `xrayctl` are Go binaries; `ghf` and
+`updnvim` are shell scripts.
 
 ## Tools
 
@@ -22,14 +23,16 @@ ghf action [repo] Actions runs
 
 Downloads and installs Neovim (nightly by default, override with
 `LATEST_RELEASE=v0.11.0`) into the current nvim prefix, or
-`~/.local/opt/nvim` when nvim is not installed yet.
+`~/.local/opt/nvim` when nvim is not installed yet. On Windows use
+`updnvim.ps1`.
 
 ### xrayctl
 
 State-driven manager for a local Xray service (vless + reality): node and
 routing-rule management, port configuration, config generation with
-`xray run -test` validation, service restarts, and Linux transparent-proxy
-rules. Run `xrayctl help` for the full command reference.
+`xray run -test` validation, service restarts (systemd on Linux, NSSM on
+Windows), and Linux transparent-proxy rules. Run `xrayctl help` for the
+full command reference.
 
 ### proxy
 
@@ -52,24 +55,27 @@ proxy ssh HOST PORT
 ProxyCommand sh -c 'exec "$HOME/.local/bin/proxy" ssh %h %p'
 ```
 
-On Windows the same commands are available via `proxy.cmd` / `proxy.ps1`;
-`proxy sync` and `proxy set` also update user-level environment variables.
+On Windows `proxy set` and `proxy sync` also update user-level environment
+variables.
 
 ### completion
 
 Routes completion generation to the tools themselves, which implement a
-`completion <zsh|bash>` subcommand — equivalently, call it directly on the
+`completion <shell>` subcommand — equivalently, call it directly on the
 tool (`ghf completion zsh`):
 
 ```
 completion zsh proxy
 ```
 
-Write the output to a file on your completion path, for example
-`~/.config/zfunc/_proxy` (zsh) or `~/.config/bash/completions/proxy.bash` (bash).
+The Go tools complete zsh, bash, fish, and powershell; ghf completes zsh
+and bash. Write the output to a file on your completion path, for example
+`~/.config/zfunc/_proxy` (zsh) or `~/.config/bash/completions/proxy.bash`
+(bash).
 
 ## Install
 
-Each release publishes two archives: `bin-posix.tar.gz` (extract into
-`~/.local/bin`) and `bin-win.zip` (extract into `%USERPROFILE%\.local\bin`;
-it also carries the shell scripts for MSYS2 environments).
+Each release publishes static binaries for linux, darwin, and windows
+(amd64 and arm64): `proxy-<os>-<arch>` and `xrayctl-<os>-<arch>[.exe]` at
+`releases/latest/download`. The shell scripts (`ghf`, `updnvim`,
+`completion`, `updnvim.ps1`) can be taken from the repository directly.
