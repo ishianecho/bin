@@ -57,6 +57,28 @@ ProxyCommand sh -c 'exec "$HOME/.local/bin/proxy" ssh %h %p'
 On Windows `proxy set` and `proxy sync` also update user-level environment
 variables. See [`PROXY.md`](PROXY.md).
 
+### notify
+
+Sends a desktop notification on macOS (`osascript`) and Linux
+(`notify-send`), with an optional title and system sound
+(`canberra-gtk-play` on Linux, when available).
+
+```
+notify "Build complete"
+notify "Task done" --title "My App"
+notify "Hello" --sound Glass
+```
+
+### port
+
+Inspects what is listening on a TCP port, or kills the processes holding
+it (via `lsof`):
+
+```
+port 8080
+port clear 8080
+```
+
 ### completion
 
 Routes completion generation to the tools themselves, which implement a
