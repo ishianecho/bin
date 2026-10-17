@@ -189,3 +189,17 @@ func requireAdmin() error {
 	}
 	return nil
 }
+
+func ServiceAction(action string) error {
+	if action != "start" && action != "stop" && action != "restart" {
+		return fmt.Errorf("Action must be start, stop, or restart")
+	}
+	if err := requireAdmin(); err != nil {
+		return err
+	}
+	nssm, err := nssmPath()
+	if err != nil {
+		return err
+	}
+	return runNssm(nssm, action)
+}

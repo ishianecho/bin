@@ -31,6 +31,8 @@ func NewCommand() *cobra.Command {
 	root.AddCommand(newNodeCommand(), newRouteCommand(), newPortCommand())
 	root.AddCommand(
 		&cobra.Command{Use: "status", Short: "Show service state, active node, ports, and route count", RunE: runStatus},
+		&cobra.Command{Use: "start", Short: "Start the xray service", RunE: func(cmd *cobra.Command, args []string) error { return ServiceAction("start") }},
+		&cobra.Command{Use: "stop", Short: "Stop the xray service", RunE: func(cmd *cobra.Command, args []string) error { return ServiceAction("stop") }},
 		&cobra.Command{Use: "restart", Short: "Regenerate, validate, and restart the service", RunE: runRestart},
 		&cobra.Command{Use: "test", Short: "Validate the generated configuration", RunE: runTest},
 		&cobra.Command{Use: "init", Short: "First-run: import the env file, seed defaults", RunE: runInit},

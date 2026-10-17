@@ -27,17 +27,32 @@ func maybeRestart(noRestart bool) error {
 	if err := active.Run(); err != nil {
 		return nil
 	}
+	stat, statErr := os.Stdin.Stat()
+	if statErr != nil || stat.Mode()&os.ModeCharDevice == 0 {
+		fmt.Println("Config regenerated; apply it with: xrayctl restart")
+		return nil
+	}
+	return ServiceAction("restart")
+}
+
+func ServiceAction(action string) error {
+	if action != "start" && action != "stop" && action != "restart" {
+		return fmt.Errorf("Action must be start, stop, or restart")
+	}
+	if _, err := exec.LookPath("systemctl"); err != nil {
+		return fmt.Errorf("systemctl not found")
+	}
 	if _, err := exec.LookPath("sudo"); err != nil {
-		return fmt.Errorf("sudo is required to restart xray")
+		return fmt.Errorf("sudo is required to %s xray", action)
 	}
-	restart := exec.Command("sudo", "systemctl", "restart", "xray")
-	restart.Stdin = os.Stdin
-	restart.Stdout = os.Stdout
-	restart.Stderr = os.Stderr
-	if err := restart.Run(); err != nil {
-		return fmt.Errorf("failed to restart xray: %w", err)
+	command := exec.Command("sudo", "systemctl", action, "xray")
+	command.Stdin = os.Stdin
+	command.Stdout = os.Stdout
+	command.Stderr = os.Stderr
+	if err := command.Run(); err != nil {
+		return fmt.Errorf("failed to %s xray: %w", action, err)
 	}
-	fmt.Println("xray restarted")
+	fmt.Printf("xray %sed\n", action)
 	return nil
 }
 
