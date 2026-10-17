@@ -134,11 +134,14 @@ func outbounds(node *Node, tag string) []map[string]any {
 		"security": security,
 	}
 	if security == "tls" {
-		stream["tlsSettings"] = map[string]any{
-			"serverName":    node.SNI,
-			"fingerprint":   "chrome",
-			"allowInsecure": node.AllowInsecure,
+		tlsSettings := map[string]any{
+			"serverName":  node.SNI,
+			"fingerprint": "chrome",
 		}
+		if node.Pin != "" {
+			tlsSettings["pinnedPeerCertChainSha256"] = []string{node.Pin}
+		}
+		stream["tlsSettings"] = tlsSettings
 	} else {
 		stream["realitySettings"] = map[string]any{
 			"serverName":  node.SNI,

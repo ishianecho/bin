@@ -37,8 +37,7 @@ func ParseVlessLink(link string) (Node, error) {
 	}
 	node.Address = strings.Trim(address, "[]")
 
-	var security, network, flow, sni, publicKey, shortID string
-	allowInsecure := false
+	var security, network, flow, sni, publicKey, shortID, pin string
 	for _, pair := range strings.Split(query, "&") {
 		if pair == "" {
 			continue
@@ -62,8 +61,8 @@ func ParseVlessLink(link string) (Node, error) {
 			network = value
 		case "flow":
 			flow = value
-		case "allowInsecure":
-			allowInsecure = value == "1" || value == "true"
+		case "pin":
+			pin = value
 		}
 	}
 	if security != "" && security != "reality" && security != "tls" {
@@ -80,7 +79,7 @@ func ParseVlessLink(link string) (Node, error) {
 	node.PublicKey = publicKey
 	node.ShortID = shortID
 	node.Security = security
-	node.AllowInsecure = allowInsecure
+	node.Pin = pin
 	node.Port = 0
 	if port != "" {
 		parsed, err := strconv.Atoi(port)

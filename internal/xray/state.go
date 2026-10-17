@@ -8,15 +8,15 @@ import (
 )
 
 type Node struct {
-	Tag           string `json:"tag"`
-	Address       string `json:"address"`
-	Port          int    `json:"port"`
-	UUID          string `json:"uuid"`
-	SNI           string `json:"sni"`
-	PublicKey     string `json:"publicKey"`
-	ShortID       string `json:"shortId"`
-	Security      string `json:"security,omitempty"`
-	AllowInsecure bool   `json:"allowInsecure,omitempty"`
+	Tag       string `json:"tag"`
+	Address   string `json:"address"`
+	Port      int    `json:"port"`
+	UUID      string `json:"uuid"`
+	SNI       string `json:"sni"`
+	PublicKey string `json:"publicKey"`
+	ShortID   string `json:"shortId"`
+	Security  string `json:"security,omitempty"`
+	Pin       string `json:"pin,omitempty"`
 }
 
 type Route struct {

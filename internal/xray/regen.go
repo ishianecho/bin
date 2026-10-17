@@ -3,10 +3,12 @@ package xray
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 func Regenerate(state *State, noRestart bool) error {
@@ -24,11 +26,17 @@ func Regenerate(state *State, noRestart bool) error {
 	}
 	if _, err := exec.LookPath("xray"); err == nil {
 		command := exec.Command("xray", "run", "-test", "-c", newPath)
-		command.Stdout = nil
-		command.Stderr = nil
-		if err := command.Run(); err != nil {
+		stderr, err := command.StderrPipe()
+		if err != nil {
+			return err
+		}
+		if err := command.Start(); err != nil {
+			return err
+		}
+		message, _ := io.ReadAll(stderr)
+		if err := command.Wait(); err != nil {
 			os.Remove(newPath)
-			return fmt.Errorf("Generated configuration failed 'xray run -test'; the previous config is kept")
+			return fmt.Errorf("Generated configuration failed 'xray run -test'; the previous config is kept: %s", strings.TrimSpace(string(message)))
 		}
 	}
 	if err := os.Rename(newPath, ConfigPath()); err != nil {
