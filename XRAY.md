@@ -29,7 +29,7 @@ xrayctl tproxy status
 xrayctl direct curl -s ifconfig.me
 ```
 
-Only vless + reality + xtls-rprx-vision is supported. Custom routes are
+Only vless + reality/tls + xtls-rprx-vision is supported. Custom routes are
 evaluated before all built-in rules. Mutating commands regenerate the
 config, validate it with `xray run -test`, and restart the service when
 running (`--no-restart` skips). When the socks port changes, `proxy set`

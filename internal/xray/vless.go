@@ -38,6 +38,7 @@ func ParseVlessLink(link string) (Node, error) {
 	node.Address = strings.Trim(address, "[]")
 
 	var security, network, flow, sni, publicKey, shortID string
+	allowInsecure := false
 	for _, pair := range strings.Split(query, "&") {
 		if pair == "" {
 			continue
@@ -61,10 +62,12 @@ func ParseVlessLink(link string) (Node, error) {
 			network = value
 		case "flow":
 			flow = value
+		case "allowInsecure":
+			allowInsecure = value == "1" || value == "true"
 		}
 	}
-	if security != "" && security != "reality" {
-		return node, fmt.Errorf("Only reality security is supported")
+	if security != "" && security != "reality" && security != "tls" {
+		return node, fmt.Errorf("Only reality and tls security are supported")
 	}
 	if network != "" && network != "tcp" {
 		return node, fmt.Errorf("Only the tcp transport is supported")
@@ -76,6 +79,8 @@ func ParseVlessLink(link string) (Node, error) {
 	node.SNI = sni
 	node.PublicKey = publicKey
 	node.ShortID = shortID
+	node.Security = security
+	node.AllowInsecure = allowInsecure
 	node.Port = 0
 	if port != "" {
 		parsed, err := strconv.Atoi(port)
@@ -115,7 +120,10 @@ func ValidateNode(node *Node, name string) error {
 	if node.SNI == "" {
 		return fmt.Errorf("%s is missing sni", name)
 	}
-	if node.PublicKey == "" {
+	if node.Security != "" && node.Security != "reality" && node.Security != "tls" {
+		return fmt.Errorf("%s has an unsupported security", name)
+	}
+	if node.Security != "tls" && node.PublicKey == "" {
 		return fmt.Errorf("%s is missing a public key", name)
 	}
 	if node.Port == 0 {

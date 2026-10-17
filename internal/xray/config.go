@@ -125,6 +125,30 @@ func inbounds(state *State) []map[string]any {
 }
 
 func outbounds(node *Node, tag string) []map[string]any {
+	security := node.Security
+	if security == "" {
+		security = "reality"
+	}
+	stream := map[string]any{
+		"network":  "tcp",
+		"security": security,
+	}
+	if security == "tls" {
+		stream["tlsSettings"] = map[string]any{
+			"serverName":    node.SNI,
+			"fingerprint":   "chrome",
+			"allowInsecure": node.AllowInsecure,
+		}
+	} else {
+		stream["realitySettings"] = map[string]any{
+			"serverName":  node.SNI,
+			"fingerprint": "chrome",
+			"show":        false,
+			"publicKey":   node.PublicKey,
+			"shortId":     node.ShortID,
+			"spiderX":     "",
+		}
+	}
 	vless := map[string]any{
 		"tag":      tag,
 		"protocol": "vless",
@@ -145,25 +169,14 @@ func outbounds(node *Node, tag string) []map[string]any {
 				},
 			},
 		},
-		"streamSettings": map[string]any{
-			"network":  "tcp",
-			"security": "reality",
-			"realitySettings": map[string]any{
-				"serverName":  node.SNI,
-				"fingerprint": "chrome",
-				"show":        false,
-				"publicKey":   node.PublicKey,
-				"shortId":     node.ShortID,
-				"spiderX":     "",
-			},
-		},
+		"streamSettings": stream,
 		"mux": map[string]any{
 			"enabled":     false,
 			"concurrency": -1,
 		},
 	}
 	if runtime.GOOS == "linux" {
-		vless["streamSettings"].(map[string]any)["sockopt"] = map[string]any{"mark": 255}
+		stream["sockopt"] = map[string]any{"mark": 255}
 	}
 
 	direct := map[string]any{
