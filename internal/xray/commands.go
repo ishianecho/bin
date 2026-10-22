@@ -1,7 +1,6 @@
 package xray
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -127,32 +126,36 @@ func newNodeAddCommand() *cobra.Command {
 
 func newNodeRmCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "rm <tag>",
-		Short: "Remove a node",
-		Args:  cobra.ExactArgs(1),
+		Use:               "rm <tag...>",
+		Short:             "Remove nodes",
+		Args:              cobra.MinimumNArgs(1),
+		ValidArgsFunction: completeNodeTags,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			state, err := Load()
 			if err != nil {
 				return err
 			}
-			tag := args[0]
-			if state.FindNode(tag) == nil {
-				return fmt.Errorf("Node '%s' not found", tag)
+			remove := map[string]bool{}
+			for _, tag := range args {
+				if state.FindNode(tag) == nil {
+					return fmt.Errorf("Node '%s' not found", tag)
+				}
+				remove[tag] = true
 			}
 			nodes := state.Nodes[:0]
 			for _, node := range state.Nodes {
-				if node.Tag != tag {
+				if !remove[node.Tag] {
 					nodes = append(nodes, node)
 				}
 			}
 			state.Nodes = nodes
-			if state.Active == tag {
+			if remove[state.Active] {
 				state.Active = ""
 			}
 			if err := state.Save(); err != nil {
 				return err
 			}
-			fmt.Printf("Removed node %s\n", tag)
+			fmt.Printf("Removed %d node(s)\n", len(remove))
 			if state.Active != "" {
 				return Regenerate(state, noRestart)
 			}
@@ -185,9 +188,10 @@ func newNodeListCommand() *cobra.Command {
 
 func newNodeUseCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "use <tag>",
-		Short: "Set the active node",
-		Args:  cobra.ExactArgs(1),
+		Use:               "use <tag>",
+		Short:             "Set the active node",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: completeNodeTags,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			state, err := Load()
 			if err != nil {
@@ -209,9 +213,10 @@ func newNodeUseCommand() *cobra.Command {
 
 func newNodeShowCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "show [tag]",
-		Short: "Show node details",
-		Args:  cobra.MaximumNArgs(1),
+		Use:               "show [tag]",
+		Short:             "Show node details",
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completeNodeTags,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			state, err := Load()
 			if err != nil {
@@ -255,9 +260,10 @@ func (f *nodeFlags) add(flags *pflag.FlagSet) {
 func newNodeSetCommand() *cobra.Command {
 	var flags nodeFlags
 	command := &cobra.Command{
-		Use:   "set <tag> [--address H] [--port N] [--uuid U] [--sni S] [--public-key P] [--short-id I]",
-		Short: "Update a node",
-		Args:  cobra.MinimumNArgs(1),
+		Use:               "set <tag> [--address H] [--port N] [--uuid U] [--sni S] [--public-key P] [--short-id I]",
+		Short:             "Update a node",
+		Args:              cobra.MinimumNArgs(1),
+		ValidArgsFunction: completeNodeTags,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tag := args[0]
 			for _, arg := range args[1:] {
@@ -337,6 +343,12 @@ func newRouteAddCommand() *cobra.Command {
 		Use:   "add direct|proxy|block <matcher...>",
 		Short: "Add routing rules; matcher: domain:xxx.com, geosite:cn, full:example.com, regexp:pat, geoip:cn, or a bare IP/CIDR",
 		Args:  cobra.MinimumNArgs(2),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) > 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return []string{"direct", "proxy", "block"}, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			action := args[0]
 			if action != "direct" && action != "proxy" && action != "block" {
@@ -372,39 +384,33 @@ func newRouteAddCommand() *cobra.Command {
 
 func newRouteRmCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "rm <matcher|index>",
-		Short: "Remove a routing rule",
-		Args:  cobra.ExactArgs(1),
+		Use:               "rm <matcher...>",
+		Short:             "Remove routing rules",
+		Args:              cobra.MinimumNArgs(1),
+		ValidArgsFunction: completeRouteMatchers,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			state, err := Load()
 			if err != nil {
 				return err
 			}
-			target := args[0]
-			if index, err := strconv.Atoi(target); err == nil {
-				if index < 1 || index > len(state.Routes) {
-					return fmt.Errorf("Index out of range: %s (1-%d)", target, len(state.Routes))
-				}
-				state.Routes = append(state.Routes[:index-1], state.Routes[index:]...)
-			} else {
-				found := false
-				routes := state.Routes[:0]
-				for _, route := range state.Routes {
-					if route.Matcher == target {
-						found = true
-						continue
-					}
-					routes = append(routes, route)
-				}
-				state.Routes = routes
-				if !found {
+			remove := map[string]bool{}
+			for _, target := range args {
+				if state.FindRoute(target) == nil {
 					return fmt.Errorf("Route not found: %s", target)
 				}
+				remove[target] = true
 			}
+			routes := state.Routes[:0]
+			for _, route := range state.Routes {
+				if !remove[route.Matcher] {
+					routes = append(routes, route)
+				}
+			}
+			state.Routes = routes
 			if err := state.Save(); err != nil {
 				return err
 			}
-			fmt.Printf("Removed route %s\n", target)
+			fmt.Printf("Removed %d route(s)\n", len(remove))
 			return Regenerate(state, noRestart)
 		},
 	}
@@ -419,8 +425,8 @@ func newRouteListCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			for i, route := range state.Routes {
-				fmt.Printf("%d %s %s\n", i+1, route.Action, route.Matcher)
+			for _, route := range state.Routes {
+				fmt.Printf("%s %s\n", route.Action, route.Matcher)
 			}
 			return nil
 		},
@@ -590,12 +596,4 @@ func importEnv() error {
 	fmt.Printf("Imported node %s from %s\n", node.Tag, EnvPath())
 	fmt.Printf("The env file is deprecated; state.json is authoritative and %s may be deleted\n", EnvPath())
 	return nil
-}
-
-func printJSON(value any) {
-	data, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		return
-	}
-	fmt.Println(string(data))
 }

@@ -12,14 +12,14 @@ xrayctl node add mynode 'vless://uuid@host:443?security=reality&sni=example.com&
 xrayctl node list
 xrayctl node use mynode
 xrayctl node set mynode --port 8443
-xrayctl node rm mynode
+xrayctl node rm <tag>...
 xrayctl node show [tag]
 
 xrayctl route add direct|proxy|block domain:example.com
 xrayctl route add proxy geosite:netflix
 xrayctl route add block 1.2.3.4
 xrayctl route list
-xrayctl route rm <matcher|index>
+xrayctl route rm <matcher>...
 
 xrayctl port set --socks 10808 --tproxy 10800
 xrayctl status

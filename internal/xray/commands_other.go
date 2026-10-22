@@ -11,11 +11,3 @@ func syncTproxyEnv(port int, changed bool) error {
 func platformCommands() []*cobra.Command {
 	return nil
 }
-
-func maybeRestart(noRestart bool) error {
-	return nil
-}
-
-func ServiceState() string {
-	return "unavailable"
-}
