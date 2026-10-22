@@ -2,6 +2,7 @@ package xray
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -89,6 +90,29 @@ func ParseVlessLink(link string) (Node, error) {
 		node.Port = parsed
 	}
 	return node, nil
+}
+
+func EncodeVlessLink(node Node) string {
+	security := node.Security
+	if security == "" {
+		security = "reality"
+	}
+	query := url.Values{}
+	query.Set("security", security)
+	query.Set("sni", node.SNI)
+	if security == "reality" {
+		query.Set("pbk", node.PublicKey)
+		if node.ShortID != "" {
+			query.Set("sid", node.ShortID)
+		}
+	}
+	if security == "tls" && node.Pin != "" {
+		query.Set("pin", node.Pin)
+	}
+	query.Set("type", "tcp")
+	query.Set("flow", "xtls-rprx-vision")
+	return "vless://" + node.UUID + "@" + node.Address + ":" +
+		strconv.Itoa(node.Port) + "?" + query.Encode() + "#" + url.PathEscape(node.Tag)
 }
 
 func percentDecode(value string) string {

@@ -12,8 +12,10 @@ xrayctl node add mynode 'vless://uuid@host:443?security=reality&sni=example.com&
 xrayctl node list
 xrayctl node use mynode
 xrayctl node set mynode --port 8443
+xrayctl node set mynode port 8443 sni example.com
 xrayctl node rm <tag>...
-xrayctl node show [tag]
+xrayctl node rn mynode newname
+xrayctl node show [tag] [--link]
 
 xrayctl route add direct|proxy|block domain:example.com
 xrayctl route add proxy geosite:netflix

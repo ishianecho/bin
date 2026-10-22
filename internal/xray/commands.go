@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -45,7 +46,7 @@ func newNodeCommand() *cobra.Command {
 		Use:   "node",
 		Short: "Manage nodes",
 	}
-	command.AddCommand(newNodeAddCommand(), newNodeRmCommand(), newNodeListCommand(), newNodeUseCommand(), newNodeShowCommand(), newNodeSetCommand())
+	command.AddCommand(newNodeAddCommand(), newNodeRmCommand(), newNodeRnCommand(), newNodeListCommand(), newNodeUseCommand(), newNodeShowCommand(), newNodeSetCommand())
 	return command
 }
 
@@ -165,6 +166,46 @@ func newNodeRmCommand() *cobra.Command {
 	}
 }
 
+func newNodeRnCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "rn <old> <new>",
+		Short: "Rename a node",
+		Args:  cobra.ExactArgs(2),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) > 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			return completeNodeTags(cmd, args, toComplete)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			state, err := Load()
+			if err != nil {
+				return err
+			}
+			oldTag, newTag := args[0], args[1]
+			node := state.FindNode(oldTag)
+			if node == nil {
+				return fmt.Errorf("Node '%s' not found", oldTag)
+			}
+			if state.FindNode(newTag) != nil {
+				return fmt.Errorf("Node '%s' already exists", newTag)
+			}
+			node.Tag = newTag
+			if state.Active == oldTag {
+				state.Active = newTag
+			}
+			if err := state.Save(); err != nil {
+				return err
+			}
+			fmt.Printf("Renamed node %s to %s\n", oldTag, newTag)
+			if state.Active == newTag {
+				return Regenerate(state, noRestart)
+			}
+			return nil
+		},
+	}
+}
+
 func newNodeListCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
@@ -212,7 +253,8 @@ func newNodeUseCommand() *cobra.Command {
 }
 
 func newNodeShowCommand() *cobra.Command {
-	return &cobra.Command{
+	var link bool
+	command := &cobra.Command{
 		Use:               "show [tag]",
 		Short:             "Show node details",
 		Args:              cobra.MaximumNArgs(1),
@@ -233,10 +275,16 @@ func newNodeShowCommand() *cobra.Command {
 			if node == nil {
 				return fmt.Errorf("Node '%s' not found", tag)
 			}
+			if link {
+				fmt.Println(EncodeVlessLink(*node))
+				return nil
+			}
 			printJSON(node)
 			return nil
 		},
 	}
+	command.Flags().BoolVar(&link, "link", false, "print the vless:// link instead of JSON")
+	return command
 }
 
 type nodeFlags struct {
@@ -260,16 +308,29 @@ func (f *nodeFlags) add(flags *pflag.FlagSet) {
 func newNodeSetCommand() *cobra.Command {
 	var flags nodeFlags
 	command := &cobra.Command{
-		Use:               "set <tag> [--address H] [--port N] [--uuid U] [--sni S] [--public-key P] [--short-id I]",
-		Short:             "Update a node",
-		Args:              cobra.MinimumNArgs(1),
-		ValidArgsFunction: completeNodeTags,
+		Use:   "set <tag> [key value ...] [--address H] [--port N] [--uuid U] [--sni S] [--public-key P] [--short-id I]",
+		Short: "Update a node; keys: address, port, uuid, sni, public-key, short-id",
+		Args:  cobra.MinimumNArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) == 0 {
+				return completeNodeTags(cmd, args, toComplete)
+			}
+			if len(args)%2 == 1 {
+				var keys []string
+				for _, key := range []string{"address", "port", "uuid", "sni", "public-key", "short-id"} {
+					if !slices.Contains(args[1:], key) {
+						keys = append(keys, key)
+					}
+				}
+				return keys, cobra.ShellCompDirectiveNoFileComp
+			}
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tag := args[0]
-			for _, arg := range args[1:] {
-				if !strings.HasPrefix(arg, "-") {
-					return fmt.Errorf("Unexpected argument: %s", arg)
-				}
+			pairs := args[1:]
+			if len(pairs)%2 != 0 {
+				return fmt.Errorf("Expected key value pairs after the tag")
 			}
 			state, err := Load()
 			if err != nil {
@@ -278,6 +339,44 @@ func newNodeSetCommand() *cobra.Command {
 			node := state.FindNode(tag)
 			if node == nil {
 				return fmt.Errorf("Node '%s' not found", tag)
+			}
+			checkValue := func(key, value string) error {
+				if key == "port" {
+					return nil
+				}
+				if strings.ContainsAny(value, " \t\n\r\"'\\") {
+					return fmt.Errorf("Values must not contain whitespace, quotes, or backslashes")
+				}
+				return nil
+			}
+			for i := 0; i < len(pairs); i += 2 {
+				key, value := pairs[i], pairs[i+1]
+				if err := checkValue(key, value); err != nil {
+					return err
+				}
+				switch key {
+				case "address":
+					node.Address = value
+				case "uuid":
+					node.UUID = value
+				case "sni":
+					node.SNI = value
+				case "public-key":
+					node.PublicKey = value
+				case "short-id":
+					node.ShortID = value
+				case "port":
+					port, err := strconv.Atoi(value)
+					if err != nil {
+						return fmt.Errorf("port must be a number")
+					}
+					if err := ValidatePort(port); err != nil {
+						return err
+					}
+					node.Port = port
+				default:
+					return fmt.Errorf("Unknown key: %s", key)
+				}
 			}
 			changed := cmd.Flags()
 			set := func(name string, target *string) error {
