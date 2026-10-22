@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"regexp"
@@ -20,40 +21,74 @@ import (
 var logDetourRe = regexp.MustCompile(`\[(\d+)\] app/dispatcher: taking detour \[(.+?)\] for \[(.+?)\]`)
 var logDefaultRouteRe = regexp.MustCompile(`\[(\d+)\] app/dispatcher: default route for (\S+)`)
 var logInboundRe = regexp.MustCompile(`\[(\d+)\] proxy/(socks|dokodemo):`)
+var logDokodemoSourceRe = regexp.MustCompile(`\[(\d+)\] proxy/dokodemo: received request for (\S+)`)
+var logSocksSourceRe = regexp.MustCompile(`\[(\d+)\] proxy/socks: client UDP connection from (\S+)`)
 var logTimestampRe = regexp.MustCompile(`^(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?) `)
 var logInboundTags = map[string]string{"socks": "socks", "dokodemo": "tproxy"}
+
+type logSession struct {
+	inbound string
+	from    string
+}
+
+func logHost(addr string) string {
+	if host, _, err := net.SplitHostPort(addr); err == nil {
+		return host
+	}
+	return addr
+}
 
 func filterLogLines(input io.Reader, output io.Writer, defaultTag string) {
 	scanner := bufio.NewScanner(input)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	inbounds := make(map[string]string)
+	sessions := make(map[string]logSession)
 	for scanner.Scan() {
 		line := scanner.Text()
 		prefix := ""
 		if m := logTimestampRe.FindStringSubmatch(line); m != nil {
 			prefix = m[1] + " "
 		}
-		if m := logInboundRe.FindStringSubmatch(line); m != nil {
-			if len(inbounds) > 8192 {
-				inbounds = make(map[string]string)
+		if m := logDokodemoSourceRe.FindStringSubmatch(line); m != nil {
+			if len(sessions) > 8192 {
+				sessions = make(map[string]logSession)
 			}
-			inbounds[m[1]] = logInboundTags[m[2]]
+			sessions[m[1]] = logSession{inbound: "tproxy", from: logHost(m[2])}
+			continue
+		}
+		if m := logSocksSourceRe.FindStringSubmatch(line); m != nil {
+			if len(sessions) > 8192 {
+				sessions = make(map[string]logSession)
+			}
+			sessions[m[1]] = logSession{inbound: "socks", from: logHost(m[2])}
+			continue
+		}
+		if m := logInboundRe.FindStringSubmatch(line); m != nil {
+			if len(sessions) > 8192 {
+				sessions = make(map[string]logSession)
+			}
+			sessions[m[1]] = logSession{inbound: logInboundTags[m[2]]}
 			continue
 		}
 		if m := logDetourRe.FindStringSubmatch(line); m != nil {
-			inbound := inbounds[m[1]]
-			if inbound == "" {
-				inbound = "tproxy"
+			session := sessions[m[1]]
+			if session.inbound == "" {
+				session.inbound = "tproxy"
 			}
-			fmt.Fprintf(output, "%sto %s [%s -> %s]\n", prefix, m[3], inbound, m[2])
+			if session.from == "" {
+				session.from = "-"
+			}
+			fmt.Fprintf(output, "%sfrom %s to %s [%s -> %s]\n", prefix, session.from, m[3], session.inbound, m[2])
 			continue
 		}
 		if m := logDefaultRouteRe.FindStringSubmatch(line); m != nil {
-			inbound := inbounds[m[1]]
-			if inbound == "" {
-				inbound = "tproxy"
+			session := sessions[m[1]]
+			if session.inbound == "" {
+				session.inbound = "tproxy"
 			}
-			fmt.Fprintf(output, "%sto %s [%s >> %s]\n", prefix, m[2], inbound, defaultTag)
+			if session.from == "" {
+				session.from = "-"
+			}
+			fmt.Fprintf(output, "%sfrom %s to %s [%s >> %s]\n", prefix, session.from, m[2], session.inbound, defaultTag)
 			continue
 		}
 		if strings.Contains(line, "[Info]") {
