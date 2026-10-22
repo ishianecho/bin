@@ -16,6 +16,7 @@ type generatedConfig struct {
 
 type logConfig struct {
 	Loglevel string `json:"loglevel"`
+	Access   string `json:"access,omitempty"`
 }
 
 type dnsConfig struct {
@@ -38,7 +39,7 @@ func BuildConfig(state *State) (*generatedConfig, error) {
 	}
 
 	config := &generatedConfig{
-		Log: logConfig{Loglevel: "warning"},
+		Log: logConfig{Loglevel: "info", Access: "none"},
 		DNS: dnsConfig{
 			Hosts: map[string][]string{
 				"dns.google":         {"8.8.8.8", "8.8.4.4"},

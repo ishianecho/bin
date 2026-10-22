@@ -35,5 +35,5 @@ func platformCommands() []*cobra.Command {
 			return Direct(args)
 		},
 	}
-	return []*cobra.Command{tproxy, direct}
+	return []*cobra.Command{tproxy, direct, newLogsCommand()}
 }

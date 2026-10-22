@@ -443,10 +443,10 @@ func newRouteAddCommand() *cobra.Command {
 		Short: "Add routing rules; matcher: domain:xxx.com, geosite:cn, full:example.com, regexp:pat, geoip:cn, or a bare IP/CIDR",
 		Args:  cobra.MinimumNArgs(2),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			if len(args) > 0 {
-				return nil, cobra.ShellCompDirectiveNoFileComp
+			if len(args) == 0 {
+				return []string{"direct", "proxy", "block"}, cobra.ShellCompDirectiveNoFileComp
 			}
-			return []string{"direct", "proxy", "block"}, cobra.ShellCompDirectiveNoFileComp
+			return []string{"domain:", "geosite:", "full:", "regexp:", "geoip:"}, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			action := args[0]

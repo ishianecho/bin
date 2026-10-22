@@ -28,6 +28,7 @@ xrayctl status
 xrayctl test
 xrayctl restart
 xrayctl tproxy status
+xrayctl log [-n lines]
 xrayctl direct curl -s ifconfig.me
 ```
 
