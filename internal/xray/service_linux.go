@@ -12,8 +12,10 @@ import (
 )
 
 const (
-	tproxyEnvFile = "/usr/local/etc/xray/tproxy.env"
-	tproxyGroup   = "xray_tproxy"
+	tproxyEnvFile  = "/usr/local/etc/xray/tproxy.env"
+	tproxyScript   = "/usr/local/etc/xray/tproxy.sh"
+	tproxyFwmarkRx = "fwmark 0x1 lookup 100"
+	tproxyGroup    = "xray_tproxy"
 )
 
 func maybeRestart(noRestart bool) error {
@@ -52,8 +54,36 @@ func ServiceAction(action string) error {
 	if err := command.Run(); err != nil {
 		return fmt.Errorf("failed to %s xray: %w", action, err)
 	}
+	if action == "stop" {
+		if err := teardownTproxy(); err != nil {
+			return err
+		}
+	}
 	fmt.Printf("xray %sed\n", action)
 	return nil
+}
+
+func teardownTproxy() error {
+	if !tproxyRoutingActive() {
+		return nil
+	}
+	if _, err := os.Stat(tproxyScript); err != nil {
+		return fmt.Errorf("tproxy rules are still active but %s is missing; network traffic will be black-holed until they are removed", tproxyScript)
+	}
+	command := exec.Command("sudo", tproxyScript, "stop")
+	command.Stdin = os.Stdin
+	command.Stdout = os.Stdout
+	command.Stderr = os.Stderr
+	if err := command.Run(); err != nil {
+		return fmt.Errorf("failed to tear down the tproxy rules: %w", err)
+	}
+	fmt.Println("tproxy rules removed")
+	return nil
+}
+
+func tproxyRoutingActive() bool {
+	rules, err := exec.Command("ip", "rule", "show").Output()
+	return err == nil && strings.Contains(string(rules), tproxyFwmarkRx)
 }
 
 func ServiceState() string {
@@ -89,8 +119,7 @@ func WriteTproxyEnv(port int) error {
 
 func TproxyStatus() {
 	fmt.Printf("service: %s\n", ServiceState())
-	rules, err := exec.Command("ip", "rule", "show").Output()
-	if err == nil && strings.Contains(string(rules), "fwmark 0x1 lookup 100") {
+	if tproxyRoutingActive() {
 		fmt.Println("policy routing: active")
 	} else {
 		fmt.Println("policy routing: inactive")

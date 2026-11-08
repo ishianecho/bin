@@ -53,6 +53,11 @@ packets are accepted in INPUT (required with default-deny firewalls such
 as ufw). Forwarded clients using foreign resolvers bypass the proxy; point
 them at a CN-reachable resolver or the host.
 
+The service unit applies the rules before start and removes them on stop
+(`tproxy.sh`); `xrayctl stop` also removes them itself as a safety net in
+case the unit hooks are missing or failed, so stopping never leaves
+traffic black-holed.
+
 `xrayctl direct <cmd>` runs a command outside the transparent proxy; it
 needs `xray_tproxy` group membership (granted by the setup script,
 re-login required; `sudo -g xray_tproxy <cmd>` works before re-login).
