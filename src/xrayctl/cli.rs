@@ -677,7 +677,7 @@ fn import_env() -> Result<(), String> {
 
 #[cfg(windows)]
 fn run_service(command: ServiceCommand) -> Result<(), String> {
-    use super::service_windows::{install_service, require_admin, run_nssm, uninstall_service};
+    use super::service_windows::{install_service, require_admin, uninstall_service};
     match command {
         ServiceCommand::Install => {
             require_admin()?;

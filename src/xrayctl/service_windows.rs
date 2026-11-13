@@ -24,6 +24,7 @@ pub fn service_state() -> String {
     unsafe {
         let manager = windows_sys::Win32::System::Services::OpenSCManagerW(
             std::ptr::null(),
+            std::ptr::null(),
             windows_sys::Win32::System::Services::SC_MANAGER_CONNECT,
         );
         if manager.is_null() {
