@@ -1,6 +1,6 @@
 # Xray
 
-Xray is managed by `xrayctl` (a Go binary, `xrayctl.exe` on Windows). State
+Xray is managed by `xrayctl` (a Rust binary, `xrayctl.exe` on Windows). State
 lives in `~/.config/xray/state.json`; `~/.config/xray/config.json` is
 generated output — do not edit it by hand.
 

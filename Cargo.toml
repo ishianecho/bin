@@ -1,0 +1,41 @@
+[package]
+name = "bin"
+version = "0.6.0"
+edition = "2021"
+
+[lib]
+name = "bin"
+path = "src/lib.rs"
+
+[[bin]]
+name = "proxy"
+path = "src/bin/proxy.rs"
+
+[[bin]]
+name = "xrayctl"
+path = "src/bin/xrayctl.rs"
+
+[dependencies]
+clap = { version = "4.6", features = ["derive"] }
+clap_complete = { version = "4.6", features = ["unstable-dynamic"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = "2"
+uuid = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Registry",
+    "Win32_System_Services",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

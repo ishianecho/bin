@@ -9,28 +9,72 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: linux-amd64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            name: linux-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            name: darwin-amd64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: darwin-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: windows-amd64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            name: windows-arm64
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          go-version-file: go.mod
+          targets: ${{ matrix.target }}
+
+      - name: Install aarch64 cross toolchain
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Configure aarch64 linker
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          mkdir -p .cargo
+          printf '[target.aarch64-unknown-linux-gnu]\nlinker = "aarch64-linux-gnu-gcc"\n' > .cargo/config.toml
 
       - name: Build binaries
+        shell: bash
         run: |
           mkdir -p dist
-          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
-            GOOS=${target%/*}
-            GOARCH=${target#*/}
-            ext=""
-            [ "$GOOS" = windows ] && ext=".exe"
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-s -w" \
-              -o "dist/proxy-${GOOS}-${GOARCH}${ext}" ./cmd/proxy
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags "-s -w" \
-              -o "dist/xrayctl-${GOOS}-${GOARCH}${ext}" ./cmd/xrayctl
-          done
+          ext=""
+          case "${{ matrix.target }}" in *windows*) ext=".exe";; esac
+          cargo build --release --target ${{ matrix.target }}
+          cp "target/${{ matrix.target }}/release/proxy${ext}" "dist/proxy-${{ matrix.name }}${ext}"
+          cp "target/${{ matrix.target }}/release/xrayctl${ext}" "dist/xrayctl-${{ matrix.name }}${ext}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.name }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
 
       - name: Create release
         env:

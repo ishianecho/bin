@@ -1,6 +1,6 @@
 # bin
 
-Personal CLI tools. `proxy` and `xrayctl` are Go binaries; `ghf` and
+Personal CLI tools. `proxy` and `xrayctl` are Rust binaries; `ghf` and
 `updnvim` are shell scripts.
 
 ## Tools
@@ -89,7 +89,7 @@ tool (`ghf completion zsh`):
 completion zsh proxy
 ```
 
-The Go tools complete zsh, bash, fish, and powershell; ghf completes zsh
+The Rust tools complete zsh, bash, fish, and powershell; ghf completes zsh
 and bash. Write the output to a file on your completion path, for example
 `~/.config/zfunc/_proxy` (zsh) or `~/.config/bash/completions/proxy.bash`
 (bash).
