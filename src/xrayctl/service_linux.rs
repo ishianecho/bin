@@ -89,6 +89,11 @@ fn teardown_tproxy() -> Result<(), String> {
             "failed to tear down the tproxy rules: exited with {status}"
         ));
     }
+    if tproxy_routing_active() {
+        return Err(format!(
+            "tproxy rules are still active after running {TPROXY_SCRIPT} stop; network traffic will be black-holed until they are removed"
+        ));
+    }
     println!("tproxy rules removed");
     Ok(())
 }
