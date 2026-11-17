@@ -36,7 +36,10 @@ Only vless + reality/tls + xtls-rprx-vision is supported. Custom routes are
 evaluated before all built-in rules. Mutating commands regenerate the
 config, validate it with `xray run -test`, and restart the service when
 running (`--no-restart` skips). When the socks port changes, `proxy set`
-is called automatically (see [`PROXY`](PROXY.md)).
+is called automatically (see [`PROXY`](PROXY.md)). `xrayctl start` points
+the proxy environment at the socks port and `xrayctl stop` clears it
+(`proxy set` / `proxy clear`), so shells reload a working configuration
+either way.
 
 ## Transparent proxy (Linux)
 

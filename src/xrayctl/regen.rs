@@ -42,28 +42,28 @@ pub fn regenerate(state: &State, no_restart: bool) -> Result<(), String> {
 }
 
 pub fn sync_proxy_env(socks_port: i64) {
+    let _ = run_proxy(&[
+        "set",
+        "--http",
+        &format!("http://127.0.0.1:{socks_port}"),
+        "--socks",
+        &format!("socks5://127.0.0.1:{socks_port}"),
+    ]);
+}
+
+pub fn clear_proxy_env() {
+    let _ = run_proxy(&["clear"]);
+}
+
+fn run_proxy(args: &[&str]) -> Option<()> {
     let name = if cfg!(windows) { "proxy.exe" } else { "proxy" };
-    let path = match look_path(name) {
-        Some(path) => path,
-        None => match home_dir() {
-            Some(home) => {
-                let candidate = home.join(".local").join("bin").join(name);
-                if candidate.exists() {
-                    candidate
-                } else {
-                    return;
-                }
-            }
-            None => return,
-        },
-    };
-    let _ = Command::new(&path)
-        .arg("set")
-        .arg("--http")
-        .arg(format!("http://127.0.0.1:{socks_port}"))
-        .arg("--socks")
-        .arg(format!("socks5://127.0.0.1:{socks_port}"))
-        .status();
+    let path = look_path(name).or_else(|| {
+        home_dir()
+            .map(|home| home.join(".local").join("bin").join(name))
+            .filter(|candidate| candidate.exists())
+    })?;
+    let _ = Command::new(&path).args(args).status();
+    Some(())
 }
 
 pub fn look_path(name: &str) -> Option<PathBuf> {

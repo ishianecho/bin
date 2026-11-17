@@ -4,7 +4,7 @@ use clap_complete::CompleteEnv;
 
 use super::{
     completions,
-    regen::{look_path, regenerate, sync_proxy_env},
+    regen::{clear_proxy_env, look_path, regenerate, sync_proxy_env},
     state::{self, Node, Ports, Route},
     vless::{
         encode_vless_link, parse_vless_link, validate_matcher, validate_node, validate_port,
@@ -241,8 +241,15 @@ pub fn run() -> Result<(), String> {
             println!("ports: socks={} tproxy={}", state.ports.socks, state.ports.tproxy);
             println!("routes: {} custom", state.routes.len());
         }
-        Some(Commands::Start) => service_action("start")?,
-        Some(Commands::Stop) => service_action("stop")?,
+        Some(Commands::Start) => {
+            service_action("start")?;
+            let state = state::load()?;
+            sync_proxy_env(state.ports.socks);
+        }
+        Some(Commands::Stop) => {
+            service_action("stop")?;
+            clear_proxy_env();
+        }
         Some(Commands::Restart) => {
             let state = state::load()?;
             regenerate(&state, cli.no_restart)?;
