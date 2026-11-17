@@ -14,7 +14,13 @@ proxy set --http http://127.0.0.1:10808 --socks socks5://127.0.0.1:10808 \
 proxy show
 proxy sync
 proxy clear
+proxy off -- curl https://example.com
+proxy on -- git clone https://github.com/example/repo
 ```
+
+`proxy off COMMAND` runs COMMAND with every proxy environment variable
+removed; `proxy on COMMAND` runs COMMAND with the saved configuration applied
+to its environment even when the current shell has no proxy variables set.
 
 Windows: `proxy.exe` with the same subcommands.
 

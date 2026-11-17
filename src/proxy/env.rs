@@ -1,6 +1,39 @@
 use super::config::Config;
 use std::env;
 
+pub const PROXY_KEYS: [&str; 8] = [
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "no_proxy",
+];
+
+pub fn export(cfg: &Config, command: &mut std::process::Command) {
+    for key in PROXY_KEYS {
+        command.env_remove(key);
+    }
+    if !cfg.http.is_empty() {
+        for key in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"] {
+            command.env(key, &cfg.http);
+        }
+    }
+    if !cfg.socks.is_empty() {
+        for key in ["ALL_PROXY", "all_proxy"] {
+            command.env(key, &cfg.socks);
+        }
+    }
+    if !cfg.http.is_empty() || !cfg.socks.is_empty() {
+        let no_proxy = cfg.default_no_proxy();
+        for key in ["NO_PROXY", "no_proxy"] {
+            command.env(key, &no_proxy);
+        }
+    }
+}
+
 pub fn apply(cfg: &Config) -> Result<(), String> {
     let http_keys = ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"];
     let socks_keys = ["ALL_PROXY", "all_proxy"];

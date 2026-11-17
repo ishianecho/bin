@@ -32,6 +32,16 @@ enum Command {
         #[arg(value_name = "PORT")]
         port: String,
     },
+    #[command(about = "Run a command with every proxy environment variable unset")]
+    Off {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, value_name = "COMMAND")]
+        command: Vec<String>,
+    },
+    #[command(about = "Run a command with the saved proxy configuration applied to its environment")]
+    On {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, value_name = "COMMAND")]
+        command: Vec<String>,
+    },
     #[command(about = "Remove all proxy settings")]
     Clear,
     #[command(about = "Show the saved proxy configuration")]
@@ -54,6 +64,25 @@ enum CompletionShell {
 
 fn command_factory() -> clap::Command {
     Cli::command()
+}
+
+fn exec(command: &[String], with_proxy: bool) -> Result<(), String> {
+    let (program, args) = match command.split_first() {
+        Some((program, args)) => (program, args),
+        None => return Err("a command is required".into()),
+    };
+    let mut child = std::process::Command::new(program);
+    child.args(args);
+    if with_proxy {
+        let cfg = config::read()?;
+        env::export(&cfg, &mut child);
+    } else {
+        for key in env::PROXY_KEYS {
+            child.env_remove(key);
+        }
+    }
+    let status = child.status().map_err(|e| format!("{program}: {e}"))?;
+    std::process::exit(status.code().unwrap_or(1));
 }
 
 fn long_about() -> String {
@@ -117,6 +146,8 @@ pub fn run() -> Result<(), String> {
             println!("Proxy configuration: {}", config::config_path().display());
         }
         Some(Command::Ssh { host, port }) => ssh::relay(&host, &port)?,
+        Some(Command::Off { command }) => exec(&command, false)?,
+        Some(Command::On { command }) => exec(&command, true)?,
         Some(Command::Clear) => {
             config::write(&config::Config::default())?;
             env::apply(&config::Config::default())?;
