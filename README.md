@@ -87,25 +87,14 @@ port 8080
 port clear 8080
 ```
 
-### completion
-
-Routes completion generation to the tools themselves, which implement a
-`completion <shell>` subcommand — equivalently, call it directly on the
-tool (`ghf completion zsh`):
-
-```
-completion zsh proxy
-```
-
-The Rust tools complete zsh, bash, fish, and powershell; ghf completes zsh
-and bash. Write the output to a file on your completion path, for example
-`~/.config/zfunc/_proxy` (zsh) or `~/.config/bash/completions/proxy.bash`
-(bash).
-
 ## Install
 
 Each release publishes static binaries for linux, darwin, and windows
 (amd64 and arm64): `proxy-<os>-<arch>`, `xrayctl-<os>-<arch>[.exe]`, and
 `sbctl-<os>-<arch>[.exe]` at `releases/latest/download`. The shell scripts
-(`ghf`, `updnvim`, `completion`, `updnvim.ps1`) can be taken from the
-repository directly.
+(`ghf`, `updnvim`, `updnvim.ps1`) can be taken from the repository
+directly. Each tool implements a `completion <shell>` subcommand (zsh,
+bash, fish, and powershell for the Rust tools; zsh and bash for ghf);
+write the output to a file on your completion path, for example
+`~/.config/zfunc/_proxy` (zsh) or `~/.config/bash/completions/proxy.bash`
+(bash).
