@@ -12,14 +12,6 @@ pub fn maybe_restart(no_restart: bool) -> Result<(), String> {
     if look_path("systemctl").is_none() {
         return Ok(());
     }
-    if !Command::new("systemctl")
-        .args(["is-active", "--quiet", SERVICE])
-        .status()
-        .map(|status| status.success())
-        .unwrap_or(false)
-    {
-        return Ok(());
-    }
     if !stdin_is_terminal() {
         println!("Config installed; apply it with: sbctl restart");
         return Ok(());

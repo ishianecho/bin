@@ -4,7 +4,9 @@ use crate::xrayctl::state::{Node, Route};
 
 use super::state::State;
 
-const RULE_SET_BASE: &str = "https://raw.githubusercontent.com";
+pub(super) const RULE_SET_DIR: &str = "/usr/share/sing-box/rule-set";
+pub(super) const RULE_SET_CACHE_DIR: &str = "/var/lib/sing-box/rule-set";
+const RULE_SET_BASE: &str = "https://raw.githubusercontent.com/SagerNet";
 
 pub fn build_config(state: &State) -> Result<String, String> {
     let node = state
@@ -16,14 +18,8 @@ pub fn build_config(state: &State) -> Result<String, String> {
     let mesh = state.mesh.clone().filter(|mesh| mesh.enabled);
 
     let mut rules = vec![json!({"action": "sniff"}), json!({"protocol": "dns", "action": "hijack-dns"})];
-    let mut rule_set_tags = vec!["geosite-cn".to_string(), "geoip-cn".to_string()];
     for route in &state.routes {
         rules.push(translate_route(route, &tag)?);
-        if let Some(set_tag) = route_set_tag(&route.matcher) {
-            if !rule_set_tags.contains(&set_tag) {
-                rule_set_tags.push(set_tag);
-            }
-        }
     }
     if let Some(mesh) = &mesh {
         rules.push(json!({"inbound": ["wg"], "action": "route-options", "override_address": "127.0.0.1"}));
@@ -34,9 +30,9 @@ pub fn build_config(state: &State) -> Result<String, String> {
     rules.push(json!({"rule_set": ["geosite-cn"], "action": "route", "outbound": "direct"}));
     rules.push(json!({"rule_set": ["geoip-cn"], "action": "route", "outbound": "direct"}));
 
-    let rule_sets: Vec<Value> = rule_set_tags
+    let rule_sets: Vec<Value> = rule_set_tags(state)
         .iter()
-        .filter_map(|rule_tag| rule_set_definition(rule_tag, &tag))
+        .map(|rule_tag| rule_set_definition(rule_tag))
         .collect();
 
     let config = json!({
@@ -157,7 +153,29 @@ fn route_set_tag(matcher: &str) -> Option<String> {
     }
 }
 
-fn rule_set_definition(tag: &str, detour: &str) -> Option<Value> {
+fn rule_set_tags(state: &State) -> Vec<String> {
+    let mut tags = vec!["geosite-cn".to_string(), "geoip-cn".to_string()];
+    for route in &state.routes {
+        if let Some(tag) = route_set_tag(&route.matcher) {
+            if !tags.contains(&tag) {
+                tags.push(tag);
+            }
+        }
+    }
+    tags
+}
+
+pub(super) fn missing_rule_set_tags(state: &State) -> Vec<String> {
+    rule_set_tags(state)
+        .into_iter()
+        .filter(|tag| {
+            !std::path::Path::new(&format!("{RULE_SET_DIR}/{tag}.srs")).exists()
+                && !std::path::Path::new(&format!("{RULE_SET_CACHE_DIR}/{tag}.srs")).exists()
+        })
+        .collect()
+}
+
+pub(super) fn rule_set_url(tag: &str) -> Option<String> {
     let repository = if tag.starts_with("geosite-") {
         "sing-geosite"
     } else if tag.starts_with("geoip-") {
@@ -165,8 +183,19 @@ fn rule_set_definition(tag: &str, detour: &str) -> Option<Value> {
     } else {
         return None;
     };
-    let url = format!("{RULE_SET_BASE}/{repository}/rule-set/{tag}.srs");
-    Some(json!({"type": "remote", "tag": tag, "format": "binary", "url": url, "download_detour": detour}))
+    Some(format!("{RULE_SET_BASE}/{repository}/rule-set/{tag}.srs"))
+}
+
+fn rule_set_path(tag: &str) -> String {
+    let packaged = format!("{RULE_SET_DIR}/{tag}.srs");
+    if std::path::Path::new(&packaged).exists() {
+        return packaged;
+    }
+    format!("{RULE_SET_CACHE_DIR}/{tag}.srs")
+}
+
+fn rule_set_definition(tag: &str) -> Value {
+    json!({"type": "local", "tag": tag, "format": "binary", "path": rule_set_path(tag)})
 }
 
 #[cfg(test)]

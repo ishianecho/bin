@@ -11,6 +11,7 @@ is a vless + reality outbound. State lives in `~/.config/sbctl/state.json`;
 ```sh
 sbctl init
 sbctl node add mynode 'vless://uuid@host:443?security=reality&sni=example.com&fp=chrome&pbk=PUBLICKEY&sid=SHORTID&type=tcp&flow=xtls-rprx-vision#mynode'
+sbctl node pull https://example.com/subscription
 sbctl node list
 sbctl node use mynode
 sbctl node set mynode --port 8443

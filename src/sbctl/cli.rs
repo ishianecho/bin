@@ -120,6 +120,11 @@ enum NodeCommand {
         #[arg(long, help = "print the vless:// link instead of JSON")]
         link: bool,
     },
+    #[command(about = "Pull a subscription URL and upsert nodes by tag (vless:// links, plain or base64)")]
+    Pull {
+        #[arg(value_name = "URL")]
+        url: String,
+    },
     #[command(about = "Update a node; keys: address, port, uuid, sni, public-key, short-id")]
     Set {
         #[arg(value_name = "TAG", add = ArgValueCandidates::new(completions::node_tags))]
@@ -241,8 +246,7 @@ pub fn run() -> Result<(), String> {
             regenerate(&state, cli.no_restart)?;
         }
         Some(Commands::Test) => run_test()?,
-        Some(Commands::Init) => run_init(cli.no_restart)?,
-        #[cfg(target_os = "linux")]
+        Some(Commands::Init) => run_init(cli.no_restart)?,        #[cfg(target_os = "linux")]
         Some(Commands::Log { lines, follow }) => super::logs_linux::run_log(lines, follow)?,
         Some(Commands::Completion { shell }) => {
             let value = match shell {
@@ -263,6 +267,7 @@ pub fn run() -> Result<(), String> {
 
 fn run_node(command: NodeCommand, no_restart: bool) -> Result<(), String> {
     match command {
+        NodeCommand::Pull { url } => run_node_pull(&url, no_restart),
         NodeCommand::Add {
             address,
             port,
@@ -490,6 +495,106 @@ fn run_node(command: NodeCommand, no_restart: bool) -> Result<(), String> {
     }
 }
 
+fn fetch_subscription(url: &str) -> Result<String, String> {
+    if look_path("curl").is_none() {
+        return Err("curl not found".into());
+    }
+    let output = std::process::Command::new("curl")
+        .args(["-fsSL", "--max-time", "30"])
+        .arg(url)
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !output.status.success() {
+        return Err(format!("curl exited with {}", output.status));
+    }
+    String::from_utf8(output.stdout)
+        .map_err(|_| "subscription body is not valid UTF-8".to_string())
+}
+
+fn extract_links(body: &str) -> Vec<String> {
+    let mut links = filter_links(body);
+    if links.is_empty() {
+        use base64::{engine::general_purpose::{STANDARD, STANDARD_NO_PAD}, Engine as _};
+        let trimmed = body.trim();
+        let decoded = STANDARD
+            .decode(trimmed)
+            .or_else(|_| STANDARD_NO_PAD.decode(trimmed));
+        if let Ok(data) = decoded {
+            if let Ok(text) = String::from_utf8(data) {
+                links = filter_links(&text);
+            }
+        }
+    }
+    links
+}
+
+fn filter_links(text: &str) -> Vec<String> {
+    text.lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("vless://"))
+        .map(str::to_string)
+        .collect()
+}
+
+fn run_node_pull(url: &str, no_restart: bool) -> Result<(), String> {
+    let body = fetch_subscription(url)?;
+    let links = extract_links(&body);
+    if links.is_empty() {
+        return Err("No vless:// links found in the subscription".into());
+    }
+    let mut state = state::load()?;
+    let was_empty = state.active.is_empty();
+    let mut added = 0;
+    let mut updated = 0;
+    let mut unchanged = 0;
+    let mut pinned = false;
+    let mut changed_tags: Vec<String> = Vec::new();
+    for link in &links {
+        let mut node = parse_vless_link(link).map_err(|e| format!("Invalid link: {e}"))?;
+        if node.tag.is_empty() {
+            return Err("A link in the subscription has no #tag".into());
+        }
+        let name = format!("node '{}'", node.tag);
+        validate_node(&mut node, &name)?;
+        pinned = pinned || !node.pin.is_empty();
+        let tag = node.tag.clone();
+        match state.nodes.iter().position(|n| n.tag == tag) {
+            Some(index) => {
+                if state.nodes[index] == node {
+                    unchanged += 1;
+                } else {
+                    state.nodes[index] = node;
+                    updated += 1;
+                    changed_tags.push(tag);
+                }
+            }
+            None => {
+                state.nodes.push(node);
+                added += 1;
+                changed_tags.push(tag);
+            }
+        }
+    }
+    if was_empty {
+        if let Some(node) = state.nodes.first() {
+            state.active = node.tag.clone();
+        }
+    }
+    let active_changed = was_empty || changed_tags.contains(&state.active);
+    if pinned {
+        eprintln!("Note: sing-box has no equivalent for certificate pins; the pin is ignored");
+    }
+    state::save(&state)?;
+    if was_empty {
+        println!("Active node: {}", state.active);
+    }
+    println!("Added {added}, updated {updated}, unchanged {unchanged}");
+    if active_changed {
+        return regenerate(&state, no_restart);
+    }
+    Ok(())
+}
+
 fn run_route(command: RouteCommand, no_restart: bool) -> Result<(), String> {
     match command {
         RouteCommand::Add { action, matchers } => {
@@ -652,4 +757,42 @@ fn run_init(no_restart: bool) -> Result<(), String> {
         xray_state_path.display()
     );
     regenerate(&state, no_restart)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::extract_links;
+    use base64::Engine as _;
+
+    #[test]
+    fn extracts_plain_links() {
+        let body = "vless://a@b:443?security=reality#one\nss://ignored\nvless://c@d:443#two\n";
+        let links = extract_links(body);
+        assert_eq!(links.len(), 2);
+        assert!(links[0].ends_with("#one"));
+    }
+
+    #[test]
+    fn extracts_base64_links() {
+        let plain = "vless://a@b:443?security=reality#one\nvless://c@d:443#two\n";
+        let body = base64::engine::general_purpose::STANDARD.encode(plain);
+        let links = extract_links(&body);
+        assert_eq!(links.len(), 2);
+    }
+
+    #[test]
+    fn extracts_unpadded_base64_links() {
+        let plain = "vless://a@b:443?security=reality#one\n";
+        let mut body = base64::engine::general_purpose::STANDARD.encode(plain);
+        while body.ends_with('=') {
+            body.pop();
+        }
+        let links = extract_links(&body);
+        assert_eq!(links.len(), 1);
+    }
+
+    #[test]
+    fn extracts_nothing_from_garbage() {
+        assert!(extract_links("hello world").is_empty());
+    }
 }
