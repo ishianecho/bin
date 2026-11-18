@@ -2,6 +2,7 @@ pub mod cli;
 pub mod completions;
 pub mod config;
 pub mod regen;
+pub mod ssh;
 pub mod state;
 pub mod vless;
 

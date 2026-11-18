@@ -39,7 +39,9 @@ running (`--no-restart` skips). When the socks port changes, `proxy set`
 is called automatically (see [`PROXY`](PROXY.md)). `xrayctl start` points
 the proxy environment at the socks port and `xrayctl stop` clears it
 (`proxy set` / `proxy clear`), so shells reload a working configuration
-either way.
+either way. `xrayctl stop` also appends a `Host github.com` + `ProxyJump
+none` override to `~/.ssh/config.local`, since the jump host is only
+reachable through the proxy; `xrayctl start` removes it.
 
 ## Transparent proxy (Linux)
 

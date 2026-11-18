@@ -9,7 +9,7 @@ use super::{
     vless::{
         encode_vless_link, parse_vless_link, validate_matcher, validate_node, validate_port,
     },
-    service_action, service_state, sync_tproxy_env,
+    service_action, service_state, sync_tproxy_env, ssh,
 };
 
 #[derive(Parser)]
@@ -245,10 +245,12 @@ pub fn run() -> Result<(), String> {
             service_action("start")?;
             let state = state::load()?;
             sync_proxy_env(state.ports.socks);
+            ssh::sync(true);
         }
         Some(Commands::Stop) => {
             service_action("stop")?;
             clear_proxy_env();
+            ssh::sync(false);
         }
         Some(Commands::Restart) => {
             let state = state::load()?;
