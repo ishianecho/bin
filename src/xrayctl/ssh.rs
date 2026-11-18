@@ -4,9 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const BEGIN: &str = "# xrayctl begin";
-const END: &str = "# xrayctl end";
-const BLOCK: &str = "# xrayctl begin\nHost github.com\n  ProxyJump none\n# xrayctl end\n";
+const BLOCK: &str = "Host github.com\n  ProxyJump none\n";
 
 pub fn sync(active: bool) {
     let result = match config_local() {
@@ -32,7 +30,7 @@ fn config_local() -> Option<PathBuf> {
 
 fn append_block(path: &Path) -> Result<(), String> {
     if let Ok(data) = fs::read_to_string(path) {
-        if data.contains(BEGIN) {
+        if data.contains(BLOCK) {
             return Ok(());
         }
     }
@@ -59,20 +57,11 @@ fn remove_block(path: &Path) -> Result<(), String> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
         Err(e) => return Err(e.to_string()),
     };
-    if !data.contains(BEGIN) {
+    if !data.contains(BLOCK) {
         return Ok(());
     }
-    let mut kept = String::new();
-    let mut inside = false;
-    for line in data.lines() {
-        if line.trim() == BEGIN {
-            inside = true;
-        } else if line.trim() == END {
-            inside = false;
-        } else if !inside {
-            kept.push_str(line);
-            kept.push('\n');
-        }
-    }
-    fs::write(path, kept).map_err(|e| e.to_string())
+    let updated = data
+        .replacen(&format!("\n{BLOCK}"), "\n", 1)
+        .replacen(BLOCK, "", 1);
+    fs::write(path, updated).map_err(|e| e.to_string())
 }
