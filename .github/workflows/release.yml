@@ -61,6 +61,7 @@ jobs:
           cargo build --release --target ${{ matrix.target }}
           cp "target/${{ matrix.target }}/release/proxy${ext}" "dist/proxy-${{ matrix.name }}${ext}"
           cp "target/${{ matrix.target }}/release/xrayctl${ext}" "dist/xrayctl-${{ matrix.name }}${ext}"
+          cp "target/${{ matrix.target }}/release/sbctl${ext}" "dist/sbctl-${{ matrix.name }}${ext}"
 
       - uses: actions/upload-artifact@v4
         with:

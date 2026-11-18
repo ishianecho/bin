@@ -1,7 +1,7 @@
 # bin
 
-Personal CLI tools. `proxy` and `xrayctl` are Rust binaries; `ghf` and
-`updnvim` are shell scripts.
+Personal CLI tools. `proxy`, `xrayctl`, and `sbctl` are Rust binaries; `ghf`
+and `updnvim` are shell scripts.
 
 ## Tools
 
@@ -32,6 +32,14 @@ State-driven manager for a local Xray service (vless + reality): node and
 routing-rule management, port configuration, config generation with
 `xray run -test` validation, service restarts (systemd on Linux, NSSM on
 Windows), and Linux transparent-proxy rules. See [`XRAY.md`](XRAY.md).
+
+### sbctl
+
+State-driven manager for a local sing-box service (tun + vless + reality,
+Linux only): node and routing-rule management, optional wireguard mesh
+carried inside the tunnel, config generation with `sing-box check`
+validation, and systemd service restarts. Replaces `xrayctl`; see
+[`SBCTL.md`](SBCTL.md).
 
 ### proxy
 
@@ -97,6 +105,7 @@ and bash. Write the output to a file on your completion path, for example
 ## Install
 
 Each release publishes static binaries for linux, darwin, and windows
-(amd64 and arm64): `proxy-<os>-<arch>` and `xrayctl-<os>-<arch>[.exe]` at
-`releases/latest/download`. The shell scripts (`ghf`, `updnvim`,
-`completion`, `updnvim.ps1`) can be taken from the repository directly.
+(amd64 and arm64): `proxy-<os>-<arch>`, `xrayctl-<os>-<arch>[.exe]`, and
+`sbctl-<os>-<arch>[.exe]` at `releases/latest/download`. The shell scripts
+(`ghf`, `updnvim`, `completion`, `updnvim.ps1`) can be taken from the
+repository directly.

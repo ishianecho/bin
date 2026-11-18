@@ -1,6 +1,6 @@
 [package]
 name = "bin"
-version = "0.6.3"
+version = "0.7.0"
 edition = "2021"
 
 [lib]
@@ -14,6 +14,10 @@ path = "src/bin/proxy.rs"
 [[bin]]
 name = "xrayctl"
 path = "src/bin/xrayctl.rs"
+
+[[bin]]
+name = "sbctl"
+path = "src/bin/sbctl.rs"
 
 [dependencies]
 clap = { version = "4.6", features = ["derive"] }
