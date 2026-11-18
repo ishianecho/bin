@@ -43,7 +43,7 @@ pub fn build_config(state: &State) -> Result<String, String> {
         "log": {"level": "warn"},
         "dns": {
             "servers": [
-                {"type": "udp", "tag": "cn", "server": "223.5.5.5", "detour": "direct"},
+                {"type": "udp", "tag": "cn", "server": "223.5.5.5"},
                 {"type": "udp", "tag": "remote", "server": "1.1.1.1", "detour": tag.clone()}
             ],
             "rules": [{"rule_set": ["geosite-cn"], "server": "cn"}],
@@ -279,5 +279,19 @@ mod tests {
         let mut state = state();
         state.active = String::new();
         assert!(build_config(&state).is_err());
+    }
+
+    #[test]
+    fn no_detour_to_the_empty_direct_outbound() {
+        let data = build_config(&state()).unwrap();
+        let config: Value = serde_json::from_str(&data).unwrap();
+        let cn = config["dns"]["servers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|server| server["tag"] == "cn")
+            .unwrap();
+        assert!(cn.get("detour").is_none());
+        assert!(config["route"]["auto_detect_interface"].as_bool().unwrap());
     }
 }
