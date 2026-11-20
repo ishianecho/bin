@@ -144,6 +144,45 @@ fn set_user_environment(cfg: &Config) -> Result<(), String> {
 }
 
 #[cfg(not(windows))]
-fn set_user_environment(_cfg: &Config) -> Result<(), String> {
-    Ok(())
+fn set_user_environment(cfg: &Config) -> Result<(), String> {
+    use std::process::Command;
+    let run = |args: Vec<String>| -> Result<(), String> {
+        let mut command = Command::new("systemctl");
+        command.arg("--user");
+        for arg in &args {
+            command.arg(arg);
+        }
+        let status = command
+            .status()
+            .map_err(|e| format!("set user environment: {e}"))?;
+        if !status.success() {
+            return Err("set user environment: systemctl failed".into());
+        }
+        Ok(())
+    };
+    if cfg.http.is_empty() && cfg.socks.is_empty() {
+        return run(
+            ["unset-environment"]
+                .iter()
+                .chain(PROXY_KEYS.iter())
+                .map(|key| key.to_string())
+                .collect(),
+        );
+    }
+    let mut args = vec!["set-environment".to_string()];
+    if !cfg.http.is_empty() {
+        for key in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"] {
+            args.push(format!("{key}={}", cfg.http));
+        }
+    }
+    if !cfg.socks.is_empty() {
+        for key in ["ALL_PROXY", "all_proxy"] {
+            args.push(format!("{key}={}", cfg.socks));
+        }
+    }
+    let no_proxy = cfg.default_no_proxy();
+    for key in ["NO_PROXY", "no_proxy"] {
+        args.push(format!("{key}={no_proxy}"));
+    }
+    run(args)
 }
